@@ -1,0 +1,17 @@
+{
+  "name": "dvolabs-automaton-portal",
+  "version": "1.0.0",
+  "description": "Production Node.js web server and dashboard for BaseSentinel Conway Automaton",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "cd automaton && pnpm install && pnpm build"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
