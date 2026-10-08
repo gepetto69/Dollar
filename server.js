@@ -249,9 +249,11 @@ app.get("/", async (req, res) => {
 </head>
 <body class="bg-[#090d16] text-slate-100 min-h-screen flex flex-col justify-between selection:bg-blue-600 selection:text-white">
   
-  <!-- Top Banner -->
-  <div class="bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-600 px-4 py-2 text-center text-xs font-semibold text-white tracking-wide">
-    ⚡ Micro-service souverain propulsé par l'IA • Auditez n'importe quel contrat sur Base pour 0.25 USDC
+    <!-- Top Banner -->
+  <div class="bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-600 px-4 py-2 text-center text-xs font-semibold text-white tracking-wide flex items-center justify-center gap-2 flex-wrap">
+    <span>⚡ Micro-service souverain propulsé par l'IA • Auditez n'importe quel contrat sur Base pour 0.25 USDC</span>
+    <span class="opacity-60">•</span>
+    <a href="#growth-section" class="underline hover:text-cyan-200 transition">Partager & Intégrer</a>
   </div>
 
   <!-- Header -->
@@ -389,7 +391,7 @@ app.get("/", async (req, res) => {
     </div>
 
     <!-- For Developers / Integrators API Pitch -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+    <div id="growth-section" class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
       
       <div class="bg-[#111827]/60 border border-slate-800/80 rounded-3xl p-8">
         <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
@@ -420,6 +422,39 @@ app.get("/", async (req, res) => {
         </div>
       </div>
 
+    </div>
+
+    <!-- Distribution & Community Sharing -->
+    <div class="bg-gradient-to-b from-[#111827]/80 to-[#0c1220]/80 border border-slate-800 rounded-3xl p-8 mb-16">
+      <div class="max-w-3xl">
+        <h3 class="text-2xl font-bold text-white mb-2">📢 Propulser l'agent vers les communautés</h3>
+        <p class="text-slate-400 text-sm mb-6 leading-relaxed">
+          Pour que l'agent génère du volume, partagez-le directement dans les canaux où les investisseurs et créateurs cherchent des garanties de sécurité contre les arnaques Base.
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <a href="https://warpcast.com/~/compose?text=Je%20viens%20de%20tester%20BaseSentinel%20sur%20@base%20:%20audit%20anti-honeypot%20instantan%C3%A9%20par%20IA%20pour%200.25%20USDC.%20Testez%20en%20live%20:%20https://dvolabs.cloud/" 
+             target="_blank" 
+             class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold transition">
+            <span>🟣 Partager sur Warpcast / Base</span>
+          </a>
+
+          <a href="https://twitter.com/intent/tweet?text=J%27ai%20lanc%C3%A9%20un%20audit%20de%20contrat%20Base%20via%20BaseSentinel%20AI%20pour%200.25%20USDC.%20D%C3%A9tection%20de%20mints%20cach%C3%A9s%20et%20backdoors%20en%20direct%20:%20https://dvolabs.cloud/%20%23Base%20%23BuildOnBase" 
+             target="_blank" 
+             class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 text-xs font-bold transition">
+            <span>🐦 Partager sur X (Twitter)</span>
+          </a>
+
+          <button onclick="navigator.clipboard.writeText('https://dvolabs.cloud/api/analyze'); showAlert('✓ Lien API copiée dans le presse-papier !');" 
+                  class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition">
+            <span>🔗 Copier l'endpoint API</span>
+          </button>
+        </div>
+
+        <div class="text-xs text-slate-500 font-mono">
+          Endpoint public agent-to-agent : <span class="text-slate-400">https://dvolabs.cloud/.well-known/agent-card.json</span>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -549,7 +584,7 @@ app.get("/", async (req, res) => {
         showAlert("Échec : " + (err.reason || err.message), true);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<span>🛡️ Lancer l'Audit Certifié (0.25 USDC)</span>';
+        btn.innerHTML = "<span>🛡️ Lancer l'Audit Certifié (0.25 USDC)</span>";
       }
     }
 
