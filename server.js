@@ -431,8 +431,6 @@ app.get("/", async (req, res) => {
       <div class="flex items-center space-x-5">
         <a href="/.well-known/agent-card.json" target="_blank" class="hover:text-slate-300 transition font-mono">Agent Card (ERC-8004)</a>
         <span>•</span>
-        <a href="https://github.com/gepetto69/Dollar" target="_blank" class="hover:text-slate-300 transition">Code Source</a>
-        <span>•</span>
         <a href="/health" target="_blank" class="hover:text-slate-300 transition">Santé API</a>
       </div>
     </div>
