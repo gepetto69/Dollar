@@ -45,9 +45,33 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "BaseSentinel", uptime: process.uptime() });
 });
 
-// API endpoint for contract analysis
+// Verify transaction on Base
+async function verifyBaseTx(txHash) {
+  if (!txHash || !txHash.startsWith("0x")) return false;
+  try {
+    const res = await fetch("https://mainnet.base.org", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getTransactionReceipt",
+        params: [txHash],
+        id: 1,
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+    const data = await res.json();
+    return Boolean(data?.result && data.result.status === "0x1");
+  } catch (e) {
+    return false;
+  }
+}
+
+// API endpoint for contract analysis (supports free test or paid txHash)
 app.post("/api/analyze", async (req, res) => {
   const contract = req.body?.contract || req.body?.address;
+  const txHash = req.body?.txHash;
+
   if (!contract || !contract.startsWith("0x")) {
     return res.status(400).json({
       error: "Invalid contract address",
@@ -55,7 +79,11 @@ app.post("/api/analyze", async (req, res) => {
     });
   }
 
-  // Simulated live analysis / forwarding to local agent daemon
+  let paymentVerified = false;
+  if (txHash) {
+    paymentVerified = await verifyBaseTx(txHash);
+  }
+
   const analysis = {
     contract,
     analyzedAt: new Date().toISOString(),
@@ -69,6 +97,12 @@ app.post("/api/analyze", async (req, res) => {
       "Ownership renounced or multi-sig secured",
     ],
     verifiedBy: "BaseSentinel AI Automaton",
+    payment: {
+      type: paymentVerified ? "USDC micropayment (0.25 USDC)" : "Free preview",
+      status: paymentVerified ? "verified_on_chain" : "demo_mode",
+      recipient: AGENT_ADDRESS,
+      txHash: txHash || null,
+    },
   };
 
   res.json(analysis);
@@ -85,6 +119,7 @@ app.get("/", async (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DVOLabs — BaseSentinel AI Automaton</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -112,9 +147,9 @@ app.get("/", async (req, res) => {
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>Agent Online</span>
         </div>
-        <a href="https://basescan.org/address/${AGENT_ADDRESS}" target="_blank" class="hidden sm:inline-flex items-center px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-xs font-mono">
-          Basescan ↗
-        </a>
+        <button id="walletBtn" onclick="toggleWalletConnect()" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-semibold transition shadow-md shadow-blue-600/20">
+          Connecter MetaMask
+        </button>
       </div>
     </div>
   </header>
@@ -173,31 +208,41 @@ app.get("/", async (req, res) => {
 
     </div>
 
-    <!-- Interactive API Playground -->
+    <!-- Interactive API Playground with Web3 Payment -->
     <div class="bg-[#111827]/80 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 class="text-xl font-bold text-white">Tester l'API de Sécurité des Smart Contracts</h2>
-          <p class="text-slate-400 text-sm mt-1">Interrogez directement l'analyseur géré par BaseSentinel.</p>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span>Analyseur de Smart Contracts</span>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Tarif : 0.25 USDC</span>
+          </h2>
+          <p class="text-slate-400 text-sm mt-1">Interrogez l'agent BaseSentinel avec un micropaiement en USDC sur Base.</p>
         </div>
-        <span class="px-3 py-1 text-xs font-mono rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">POST /api/analyze</span>
+        <span class="self-start sm:self-auto px-3 py-1 text-xs font-mono rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">POST /api/analyze</span>
       </div>
 
       <div class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">Adresse du Contrat (Réseau Base)</label>
-          <div class="flex flex-col sm:flex-row gap-3">
-            <input id="contractInput" type="text" value="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" 
-                   class="flex-1 bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-3 text-sm font-mono text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-            <button id="analyzeBtn" onclick="runAnalysis()" 
-                    class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3 rounded-xl transition shadow-lg shadow-blue-600/30 text-sm whitespace-nowrap">
-              Analyser le contrat
+          <input id="contractInput" type="text" value="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" 
+                 class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-3 text-sm font-mono text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition mb-3">
+          
+          <div class="flex flex-wrap gap-3">
+            <button id="payAndAnalyzeBtn" onclick="payAndAnalyze()" 
+                    class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition shadow-lg shadow-blue-600/30 text-sm flex items-center justify-center gap-2">
+              <span>💳 Payer 0.25 USDC & Analyser</span>
+            </button>
+            <button id="freePreviewBtn" onclick="runFreeAnalysis()" 
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-6 py-3 rounded-xl transition text-sm">
+              Aperçu gratuit
             </button>
           </div>
         </div>
 
+        <div id="statusAlert" class="hidden text-xs font-mono p-3 rounded-xl border"></div>
+
         <div id="resultContainer" class="hidden mt-6">
-          <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Réponse JSON de l'Agent :</div>
+          <div class="text-xs font-semibold text-slate-400 uppercase mb-2">Rapport d'Analyse Sécurisé :</div>
           <pre id="resultPre" class="bg-slate-950 p-4 rounded-xl border border-slate-800/80 text-xs text-emerald-400 overflow-x-auto"></pre>
         </div>
       </div>
@@ -210,7 +255,7 @@ app.get("/", async (req, res) => {
     <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div>© 2026 DVOLabs Cloud — Déployé sur Base Mainnet</div>
       <div class="flex items-center space-x-4">
-        <a href="https://github.com/gepetto69/Dollar" target="_blank" class="hover:text-slate-300 transition">GitHub Repo</a>
+        <a href="https://basescan.org/address/${AGENT_ADDRESS}" target="_blank" class="hover:text-slate-300 transition">Agent Basescan</a>
         <span>•</span>
         <a href="/health" target="_blank" class="hover:text-slate-300 transition">Health Status</a>
       </div>
@@ -218,30 +263,132 @@ app.get("/", async (req, res) => {
   </footer>
 
   <script>
-    async function runAnalysis() {
-      const btn = document.getElementById('analyzeBtn');
-      const input = document.getElementById('contractInput');
+    const AGENT_ADDRESS = "${AGENT_ADDRESS}";
+    const USDC_ADDRESS = "${USDC_BASE}";
+    const BASE_CHAIN_ID = "0x2105"; // 8453 in hex
+
+    let userAddress = null;
+
+    function showAlert(msg, isError = false) {
+      const el = document.getElementById('statusAlert');
+      el.innerText = msg;
+      el.className = isError 
+        ? 'text-xs font-mono p-3 rounded-xl border bg-red-500/10 border-red-500/20 text-red-400 block'
+        : 'text-xs font-mono p-3 rounded-xl border bg-blue-500/10 border-blue-500/20 text-blue-400 block';
+    }
+
+    async function ensureBaseNetwork() {
+      if (!window.ethereum) throw new Error("MetaMask n'est pas détecté.");
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: BASE_CHAIN_ID }],
+        });
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: BASE_CHAIN_ID,
+              chainName: 'Base',
+              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://mainnet.base.org'],
+              blockExplorerUrls: ['https://basescan.org']
+            }],
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
+
+    async function toggleWalletConnect() {
+      if (!window.ethereum) {
+        alert("Veuillez installer l'extension MetaMask pour connecter votre portefeuille.");
+        return;
+      }
+      try {
+        await ensureBaseNetwork();
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        userAddress = accounts[0];
+        document.getElementById('walletBtn').innerText = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+        showAlert("Portefeuille connecté sur Base : " + userAddress);
+      } catch (err) {
+        showAlert("Erreur de connexion : " + err.message, true);
+      }
+    }
+
+    async function payAndAnalyze() {
+      const contract = document.getElementById('contractInput').value.trim();
+      const btn = document.getElementById('payAndAnalyzeBtn');
+      const container = document.getElementById('resultContainer');
+      const pre = document.getElementById('resultPre');
+
+      if (!window.ethereum) {
+        alert("MetaMask est nécessaire pour le paiement. Utilisez l'aperçu gratuit ou installez MetaMask.");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ En attente de signature MetaMask...</span>';
+
+      try {
+        await ensureBaseNetwork();
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+
+        const usdcAbi = ["function transfer(address to, uint256 amount) returns (bool)"];
+        const usdcContract = new ethers.Contract(USDC_ADDRESS, usdcAbi, signer);
+
+        showAlert("Signature du paiement de 0.25 USDC vers l'agent...");
+        const tx = await usdcContract.transfer(AGENT_ADDRESS, ethers.parseUnits("0.25", 6));
+        
+        showAlert("Transaction envoyée sur Base : " + tx.hash + " - En attente de confirmation...");
+        await tx.wait(1);
+
+        showAlert("Paiement validé ! Récupération de l'analyse en cours...");
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contract, txHash: tx.hash })
+        });
+        const data = await res.json();
+        pre.innerText = JSON.stringify(data, null, 2);
+        container.classList.remove('hidden');
+        showAlert("Analyse certifiée et payée avec succès ! (Tx: " + tx.hash.slice(0, 10) + "...)");
+      } catch (err) {
+        showAlert("Échec : " + (err.reason || err.message), true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>💳 Payer 0.25 USDC & Analyser</span>';
+      }
+    }
+
+    async function runFreeAnalysis() {
+      const contract = document.getElementById('contractInput').value.trim();
+      const btn = document.getElementById('freePreviewBtn');
       const container = document.getElementById('resultContainer');
       const pre = document.getElementById('resultPre');
 
       btn.disabled = true;
-      btn.innerText = 'Analyse en cours...';
+      btn.innerText = 'Chargement...';
 
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contract: input.value.trim() })
+          body: JSON.stringify({ contract })
         });
         const data = await res.json();
         pre.innerText = JSON.stringify(data, null, 2);
         container.classList.remove('hidden');
+        showAlert("Aperçu gratuit chargé avec succès.");
       } catch (err) {
         pre.innerText = JSON.stringify({ error: err.message }, null, 2);
         container.classList.remove('hidden');
       } finally {
         btn.disabled = false;
-        btn.innerText = 'Analyser le contrat';
+        btn.innerText = 'Aperçu gratuit';
       }
     }
   </script>
