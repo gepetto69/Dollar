@@ -176,6 +176,17 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "BaseSentinel", uptime: process.uptime() });
 });
 
+// Download Presentation PDF Guide
+app.get("/guide.pdf", (req, res) => {
+  const pdfPath = path.join(__dirname, "GUIDE_PROMOTION_DVOLABS.pdf");
+  if (fs.existsSync(pdfPath)) {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'inline; filename="Guide_DVOLabs_BaseSentinel.pdf"');
+    return res.sendFile(pdfPath);
+  }
+  res.status(404).send("PDF guide not found");
+});
+
 // ERC-8004 Agent Card Specification
 app.get("/.well-known/agent-card.json", (req, res) => {
   res.json({
@@ -530,6 +541,10 @@ app.get("/", async (req, res) => {
     <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div id="txt-footer-copy">© 2026 DVOLabs Cloud — BaseSentinel AI Agent. Audits automatisés sur Base.</div>
       <div class="flex items-center space-x-5">
+        <a href="/guide.pdf" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1">
+          <span>📄 Guide PDF</span>
+        </a>
+        <span>•</span>
         <a href="/.well-known/agent-card.json" target="_blank" class="hover:text-slate-300 transition font-mono">Agent Card (ERC-8004)</a>
         <span>•</span>
         <a href="/health" target="_blank" class="hover:text-slate-300 transition" id="txt-footer-health">Santé API</a>
