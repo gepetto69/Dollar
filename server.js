@@ -176,15 +176,44 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "BaseSentinel", uptime: process.uptime() });
 });
 
-// Download Presentation PDF Guide
+// Download Presentation PDF Guides (multilingual)
 app.get("/guide.pdf", (req, res) => {
-  const pdfPath = path.join(__dirname, "GUIDE_PROMOTION_DVOLABS.pdf");
+  const lang = (req.query.lang || "fr").toLowerCase();
+  const validLangs = ["fr", "en", "nl"];
+  const targetLang = validLangs.includes(lang) ? lang : "fr";
+  const filename = `guide_${targetLang}.pdf`;
+  const pdfPath = path.join(__dirname, filename);
   if (fs.existsSync(pdfPath)) {
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'inline; filename="Guide_DVOLabs_BaseSentinel.pdf"');
+    res.setHeader("Content-Disposition", `inline; filename="Guide_DVOLabs_${targetLang.toUpperCase()}.pdf"`);
     return res.sendFile(pdfPath);
   }
+  // Fallback to legacy single PDF if present
+  const fallback = path.join(__dirname, "GUIDE_PROMOTION_DVOLABS.pdf");
+  if (fs.existsSync(fallback)) {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'inline; filename="Guide_DVOLabs.pdf"');
+    return res.sendFile(fallback);
+  }
   res.status(404).send("PDF guide not found");
+});
+
+app.get("/guide_fr.pdf", (req, res) => {
+  const p = path.join(__dirname, "guide_fr.pdf");
+  if (fs.existsSync(p)) return res.sendFile(p);
+  res.status(404).send("Not found");
+});
+
+app.get("/guide_en.pdf", (req, res) => {
+  const p = path.join(__dirname, "guide_en.pdf");
+  if (fs.existsSync(p)) return res.sendFile(p);
+  res.status(404).send("Not found");
+});
+
+app.get("/guide_nl.pdf", (req, res) => {
+  const p = path.join(__dirname, "guide_nl.pdf");
+  if (fs.existsSync(p)) return res.sendFile(p);
+  res.status(404).send("Not found");
 });
 
 // ERC-8004 Agent Card Specification
@@ -541,8 +570,14 @@ app.get("/", async (req, res) => {
     <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div id="txt-footer-copy">© 2026 DVOLabs Cloud — BaseSentinel AI Agent. Audits automatisés sur Base.</div>
       <div class="flex items-center space-x-5">
-        <a href="/guide.pdf" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1">
-          <span>📄 Guide PDF</span>
+        <a id="guideLinkFr" href="/guide_fr.pdf" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1">
+          <span>📄 Guide PDF (FR)</span>
+        </a>
+        <a id="guideLinkEn" href="/guide_en.pdf" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1">
+          <span>📄 (EN)</span>
+        </a>
+        <a id="guideLinkNl" href="/guide_nl.pdf" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1">
+          <span>📄 (NL)</span>
         </a>
         <span>•</span>
         <a href="/.well-known/agent-card.json" target="_blank" class="hover:text-slate-300 transition font-mono">Agent Card (ERC-8004)</a>
@@ -763,6 +798,16 @@ app.get("/", async (req, res) => {
 
       document.getElementById('txt-footer-copy').innerText = t.footerCopy;
       document.getElementById('txt-footer-health').innerText = t.footerHealth;
+
+      // Highlight active language guide in footer
+      const frEl = document.getElementById('guideLinkFr');
+      const enEl = document.getElementById('guideLinkEn');
+      const nlEl = document.getElementById('guideLinkNl');
+      if (frEl && enEl && nlEl) {
+        frEl.className = lang === 'fr' ? "text-blue-400 font-bold transition flex items-center gap-1 underline" : "text-slate-400 hover:text-slate-200 transition flex items-center gap-1";
+        enEl.className = lang === 'en' ? "text-blue-400 font-bold transition flex items-center gap-1 underline" : "text-slate-400 hover:text-slate-200 transition flex items-center gap-1";
+        nlEl.className = lang === 'nl' ? "text-blue-400 font-bold transition flex items-center gap-1 underline" : "text-slate-400 hover:text-slate-200 transition flex items-center gap-1";
+      }
 
       // Update social links
       document.getElementById('warpcastLink').href = "https://warpcast.com/~/compose?text=" + encodeURIComponent(t.warpcastShare);
