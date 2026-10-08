@@ -1,2 +1,12 @@
+# Ignore root node_modules and builds
+node_modules/
+dist/
 agent-tools/
-automaton/
+
+# Ignore nested node_modules, builds and secret files in automaton
+automaton/node_modules/
+automaton/dist/
+automaton/packages/cli/node_modules/
+automaton/packages/cli/dist/
+automaton/.automaton/
+*.log
